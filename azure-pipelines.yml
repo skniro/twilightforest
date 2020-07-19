@@ -65,60 +65,7 @@ steps:
     artifact: '$(artifactName)'
     publishLocation: 'pipeline'
 
-- powershell: |
-    $rawpath = "pipelineartifact://teamtwilight/projectId/1ef09d39-06cf-41fa-ad98-7258b70c2a72/buildId/$($Env:BUILD_BUILDID)/artifactName/Release"
-    $path = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($rawpath))
-    $jar = "twilightforest-$($env:JAVAPROPS_MINECRAFT_VERSION)-$($env:JAVAPROPS_MOD_VERSION).$($env:REVISION)-universal.jar"
-    $downloadUrl = "https://artprodcus3.artifacts.visualstudio.com/Abaabfa6c-deea-4587-ba05-c308c2597b7a/1ef09d39-06cf-41fa-ad98-7258b70c2a72/_apis/artifact/$($path)0/content?format=file&subPath=%2F$($jar)"
-    $jobResult = (Get-Culture).TextInfo.ToTitleCase(${env:agent.jobstatus})
-    $Colour = 65280
-    if ($jobResult -ne "Succeeded") {
-      $Colour = 16711680
-    }
-    Write-Host "##vso[task.setvariable variable=DiscordMessageColour]$Colour"
 
-    $json = [Ordered]@{
-        title = "Build $jobResult"
-        url = "$($env:SYSTEM_TEAMFOUNDATIONSERVERURI)Twilight%20Forest/_build/results?buildId=$($Env:BUILD_BUILDID)&view=results"
-        color = $Colour
-        fields = (
-            [Ordered]@{
-                name = "Author"
-                value = "$($env:BUILD_SOURCEVERSIONAUTHOR)"
-            },
-            [Ordered]@{
-                name = "Minecraft Version"
-                value = "$($env:JAVAPROPS_MINECRAFT_VERSION)"
-            },
-            [Ordered]@{
-                name = "Mod Version"
-                value = "$($env:JAVAPROPS_MOD_VERSION).$($env:REVISION)"
-            },
-            [Ordered]@{
-                name = "Commit"
-                value = "[$(($env:BUILD_SOURCEVERSION).Substring(0, 6))]$($env:BUILD_REPOSITORY_URI)/commit/$($env:BUILD_SOURCEVERSION)"
-            },
-            [Ordered]@{
-                name = "Download"
-                value = "$downloadUrl"
-            }
-        )
-    }
-    Write-Host "##vso[task.setvariable variable=DiscordMessage]$($json | ConvertTo-Json -Compress)"
-  displayName: Format discord message
-  condition: always()
-  env:
-    SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-
-- task: ado-discord-webhook@1
-  displayName: Announce Build to discord
-  inputs:
-    channelId: '$(DiscordChannelID)'
-    webhookKey: '$(DiscordChannelSecret)'
-    messageType: 'embeds'
-    embeds: |
-      [$(DiscordMessage)]
-  condition: and(always(), eq(variables['CreateArtifacts'], 'True'))
 
 - powershell: |
     (gci env:*).GetEnumerator() | Sort-Object Name | ForEach-Object {
